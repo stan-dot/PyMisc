@@ -1,13 +1,28 @@
-# The devcontainer should use the developer target and run as root with podman
-# or docker with user namespaces.
-ARG PYTHON_VERSION=3.11
-FROM python:${PYTHON_VERSION} as developer
+FROM python:3.12-slim-bookworm
 
-# Add any system dependencies for the developer/build environment here
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    graphviz \
-    && rm -rf /var/lib/apt/lists/*
+# Install uv
+ARG UV_VERION = 0.4.1
+COPY --from=ghcr.io/astral-sh/uv:${UV_VERION} /uv /bin/uv
 
-# Set up a virtual environment and put it in PATH
-RUN python -m venv /venv
-ENV PATH=/venv/bin:$PATH
+# Install the project with intermediate layers
+ADD .dockerignore .
+
+# First, install the dependencies
+WORKDIR /app
+ADD uv.lock /app/uv.lock
+ADD pyproject.toml /app/pyproject.toml
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project
+
+# Then, install the rest of the project
+ADD . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen
+
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Run the FastAPI application by default
+# Uses `fastapi dev` to enable hot-reloading when the `watch` sync occurs
+# Uses `--host 0.0.0.0` to allow access from outside the container
+CMD ["fastapi", "dev", "--host", "0.0.0.0", "src/uv_docker_example"]
