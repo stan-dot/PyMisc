@@ -1,0 +1,17 @@
+[project]
+name = "PyMisc"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["bluesky-websocket-streaming", "bluesky-stomp"]
+
+[tool.uv.sources]
+bird-feeder = { workspace = true }
+bluesky-websocket-streaming = { workspace = true }
+
+[tool.uv.workspace]
+members = ["packages/*"]
+exclude = ["packages/seeds"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
